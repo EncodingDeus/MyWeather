@@ -133,6 +133,19 @@ namespace MyWeather
             return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
+        private void SaveWeather(WeatherResponse weather)
+        {
+            SqliteDataAccess.ConnectTo();
+
+            SqliteDataAccess.ExecuteQuery("INSERT INTO Weather(id_city, Temp, Feels_like, Pressure, Humidity, Wind_speed, Wind_deg, Clouds, Sunrise, Sunset, Timezone) " + 
+                $"VALUES({weather.id}, '{weather.main.temp}', '{weather.main.feels_like}', {weather.main.pressure}, {weather.main.humidity}, '{weather.wind.speed}', {weather.wind.deg}, {weather.clouds.all}, {weather.sys.sunrise}, {weather.sys.sunset}, {weather.timezone}) " +
+                $"ON CONFLICT(id_city) DO UPDATE SET Temp = '{weather.main.temp}', Feels_like = '{weather.main.feels_like}', Pressure = {weather.main.pressure}, Humidity = {weather.main.humidity}, Wind_speed = '{weather.wind.speed}', Wind_deg = {weather.wind.deg}, Clouds = {weather.clouds.all}, Sunrise = {weather.sys.sunrise}, Sunset = {weather.sys.sunset}, Timezone = {weather.timezone}");
+
+            Debug.Log("Weather successfully saved");
+
+            SqliteDataAccess.Close();
+        }
+
         private void SaveCityInProfile(int cityID)
         {
             SqliteDataAccess.ConnectTo();
