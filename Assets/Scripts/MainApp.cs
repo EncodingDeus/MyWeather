@@ -28,7 +28,16 @@ namespace MyWeather
         private string responseJson;
 
         private int profile;
+
+        [SerializeField]
+        private WeatherResponse weatherInCity;
+
+        private Dictionary<int, WeatherResponse> citiesProfile;
+
         private DataTable tableFindCity;
+        private DataTable tableSettings;
+        private DataTable tableProfileCitiesId;
+        private DataTable tableWeatherInCities;
 
 
         void Start()
@@ -48,6 +57,39 @@ namespace MyWeather
 
             Debug.Log($"api:{apiKey} units:{units} language:{language} profile:{profile}");
         }
+
+        private void GetProfileInfo()
+        {
+            if (citiesProfile != null) citiesProfile.Clear();
+            else citiesProfile = new Dictionary<int, WeatherResponse>();
+
+            tableProfileCitiesId = SqliteDataAccess.GetTable($"SELECT * FROM WeatherProfile WHERE id_user_profile = {profile}");
+
+            for (int i = 0; i < tableProfileCitiesId.Rows.Count; i++)
+            {
+                tableWeatherInCities = SqliteDataAccess.GetTable($"SELECT * FROM Weather WHERE id_city = {tableProfileCitiesId.Rows[i][2].ToString()}");
+
+                Debug.Log($"city: {tableProfileCitiesId.Rows[i][2]} Found?:{tableWeatherInCities != null}");
+
+                if (tableWeatherInCities == null) continue;
+
+                weatherInCity = new WeatherResponse(
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][1].ToString()), // cityId
+                    Convert.ToSingle(tableWeatherInCities.Rows[0][2]), // temp
+                    Convert.ToSingle(tableWeatherInCities.Rows[0][3]), // feels_like
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][4]),  // pressure
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][5]),  // humidity
+                    Convert.ToSingle(tableWeatherInCities.Rows[0][6]), // wind_speed
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][7]),  // wind_deg
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][8]),  // clouds 
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][9]),  // sunrise
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][10]), // sunset
+                    Convert.ToInt32(tableWeatherInCities.Rows[0][11])  // timezone
+                    );
+
+                citiesProfile.Add(weatherInCity.id, weatherInCity); // (cityID, WeatherInCity)
+            }
+
         }
 
         private WeatherResponse GetWeatherFromFile(string path)
