@@ -8,6 +8,9 @@ namespace MyWeather
         [SerializeField]
         private Text buttonText;
 
+        [SerializeField]
+        private MainApp mainApp;
+
         private int id;
         private string name;
 
@@ -33,6 +36,11 @@ namespace MyWeather
         public void OnClick()
         {
             Debug.Log($"id:{id} name:{name}");
+        }
+
+        public void ShowWeather()
+        {
+            mainApp.ShowWeather(id);
         }
     }
 }

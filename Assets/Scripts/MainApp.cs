@@ -12,8 +12,37 @@ namespace MyWeather
     public class MainApp : MonoBehaviour
     {
 
+        [Header("Cities Buttons")]
         [SerializeField]
         private CityButton[] cityButtons;
+        [Header("Cities Profile")]
+        [SerializeField]
+        private CityButton[] cityProfileButtons;
+
+        [Header("Current Weather")]
+        [SerializeField]
+        private Text cityNameText;
+        [SerializeField]
+        private Text tempText;
+        [SerializeField]
+        private Text feels_likeText;
+        [SerializeField]
+        private Text pressureText;
+        [SerializeField]
+        private Text humidityText;
+        [SerializeField]
+        private Text wind_speedText;
+        [SerializeField]
+        private Text wind_degText;
+        [SerializeField]
+        private Text cloudsText;
+        [SerializeField]
+        private Text sunriseText;
+        [SerializeField]
+        private Text sunsetText;
+        [SerializeField]
+        private Text timezoneText;
+
 
 
         public CityInfo[] cities;
@@ -40,12 +69,51 @@ namespace MyWeather
         private DataTable tableWeatherInCities;
 
 
+
         void Start()
         {
-            // Check Network
+
+            GetSavedSettings();
+            GetProfileInfo();
+            ShowProfile();
+
+            //Debug.Log(SqliteDataAccess.GetTable($"SELECT * FROM Weather WHERE id_city = 1") == null);
+
+
+
 
             //resp = GetWeather(); // Проверить, что будет если не будет интернета, посмотреть на сайте
-            resp = GetWeather(5174);
+        }
+
+        private void ShowProfile()
+        {
+            HideProfileCityButtons();
+
+            int i = 0;
+            foreach (KeyValuePair<int, WeatherResponse> weather in citiesProfile)
+            {
+                cityProfileButtons[i].Show(weather.Value.id, weather.Value.name);
+                i++;
+            }
+        }
+
+        public void ShowWeather(int cityId)
+        {
+            weatherInCity = GetWeather(cityId);
+
+            cityNameText.text = weatherInCity.name;
+            tempText.text = weatherInCity.main.temp.ToString();
+            feels_likeText.text = weatherInCity.main.feels_like.ToString();
+            pressureText.text = weatherInCity.main.pressure.ToString();
+            humidityText.text = weatherInCity.main.humidity.ToString();
+            wind_speedText.text = weatherInCity.wind.speed.ToString();
+            wind_degText.text = weatherInCity.wind.deg.ToString();
+            cloudsText.text = weatherInCity.clouds.all.ToString();
+            sunriseText.text = weatherInCity.sys.sunrise.ToString();
+            sunsetText.text = weatherInCity.sys.sunset.ToString();
+            timezoneText.text = weatherInCity.timezone.ToString();
+        }
+
         private void GetSavedSettings()
         {
             tableSettings = SqliteDataAccess.GetTable("SELECT * FROM AppSettings");
@@ -101,7 +169,6 @@ namespace MyWeather
 
         private WeatherResponse GetWeather(string cityName) 
         {
-            url = $"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={APIKEY}&lang={LANGUAGE}&units={UNITS}";
             url = $"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={apiKey}&lang={language}&units={units}";
 
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
@@ -120,7 +187,6 @@ namespace MyWeather
 
         private WeatherResponse GetWeather(int cityId) 
         {
-            url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={APIKEY}&lang={LANGUAGE}&units={UNITS}";
             url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={apiKey}&lang={language}&units={units}";
 
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
@@ -183,6 +249,12 @@ namespace MyWeather
         {
             for (int i = 0; i < cityButtons.Length; i++)
                 cityButtons[i].Hide();
+        }
+
+        private void HideProfileCityButtons()
+        {
+            for (int i = 0; i < cityProfileButtons.Length; i++)
+                cityProfileButtons[i].Hide();
         }
 
         void SaveWeatherInJSON(string weather, string path)
