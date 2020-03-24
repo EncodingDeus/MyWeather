@@ -102,6 +102,7 @@ namespace MyWeather
         private WeatherResponse GetWeather(string cityName) 
         {
             url = $"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={APIKEY}&lang={LANGUAGE}&units={UNITS}";
+            url = $"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={apiKey}&lang={language}&units={units}";
 
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
 
@@ -120,6 +121,7 @@ namespace MyWeather
         private WeatherResponse GetWeather(int cityId) 
         {
             url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={APIKEY}&lang={LANGUAGE}&units={UNITS}";
+            url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={apiKey}&lang={language}&units={units}";
 
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
 
