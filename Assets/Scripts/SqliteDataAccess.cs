@@ -80,8 +80,10 @@ namespace MyWeather
             adapter.Dispose();
 
             Close();
-
-            return DS.Tables[0];
+            if (DS.Tables[0].Rows.Count == 0)
+                return null;
+            else
+                return DS.Tables[0];
         }
 
         /// <summary> Распаковывает базу данных в указанный путь. </summary>
