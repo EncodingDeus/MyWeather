@@ -6,11 +6,13 @@ using System.IO;
 using UnityEngine.UI;
 using System.Data;
 using System;
+using System.Net.NetworkInformation;
 
 namespace MyWeather
 {
     public class MainApp : MonoBehaviour
     {
+        private const string SITE = "openweathermap.org";
 
         [Header("Cities Buttons")]
         [SerializeField]
@@ -68,10 +70,12 @@ namespace MyWeather
         private DataTable tableProfileCitiesId;
         private DataTable tableWeatherInCities;
 
+        private IPStatus citeStatus;
 
 
         void Start()
         {
+            Debug.Log(CheckSiteStatus()); // Check Network
 
             GetSavedSettings();
             GetProfileInfo();
@@ -112,6 +116,27 @@ namespace MyWeather
             sunriseText.text = weatherInCity.sys.sunrise.ToString();
             sunsetText.text = weatherInCity.sys.sunset.ToString();
             timezoneText.text = weatherInCity.timezone.ToString();
+        }
+
+        private bool CheckSiteStatus()
+        {
+            citeStatus = IPStatus.Unknown;
+            try
+            {
+                citeStatus = new System.Net.NetworkInformation.Ping().Send(SITE).Status;
+            }
+            catch { }
+
+            if (citeStatus == IPStatus.Success)
+            {
+                Debug.Log("Сервер работает");
+                return true;
+            }
+            else
+            {
+                Debug.Log("Сервер временно недоступен!");
+                return false;
+            }
         }
 
         private void GetSavedSettings()
