@@ -11,21 +11,23 @@ namespace MyWeather
 {
     public class MainApp : MonoBehaviour
     {
-        private const string APIKEY = "e487ce3cd777104bda644f483932393c"; // private static readonly
-        
-        private const string UNITS = "metric"; // UNITS: imperial ("&units=imperial");  metric ("&units=metric");  standard (""); 
-        private const string LANGUAGE = "ru";
 
         [SerializeField]
         private CityButton[] cityButtons;
 
-        private string url;
-        private string responseJson;
 
         public CityInfo[] cities;
 
         public WeatherResponse resp;
 
+        private string apiKey;
+        private string units; // UNITS: imperial ("&units=imperial");  metric ("&units=metric");  standard (""); 
+        private string language;
+
+        private string url;
+        private string responseJson;
+
+        private int profile;
         private DataTable tableFindCity;
 
 
@@ -35,6 +37,17 @@ namespace MyWeather
 
             //resp = GetWeather(); // Проверить, что будет если не будет интернета, посмотреть на сайте
             resp = GetWeather(5174);
+        private void GetSavedSettings()
+        {
+            tableSettings = SqliteDataAccess.GetTable("SELECT * FROM AppSettings");
+
+            language = tableSettings.Rows[0][1].ToString();
+            profile = Convert.ToInt32(tableSettings.Rows[0][2].ToString());
+            units = tableSettings.Rows[0][3].ToString();
+            apiKey = tableSettings.Rows[0][4].ToString();
+
+            Debug.Log($"api:{apiKey} units:{units} language:{language} profile:{profile}");
+        }
         }
 
         private WeatherResponse GetWeatherFromFile(string path)
