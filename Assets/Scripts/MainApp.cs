@@ -133,6 +133,17 @@ namespace MyWeather
             return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
+        private void SaveCityInProfile(int cityID)
+        {
+            SqliteDataAccess.ConnectTo();
+
+            // Need to check if row exists then no need save duplicate
+            SqliteDataAccess.ExecuteQuery("INSERT INTO WeatherProfile(id_user_profile, id_city) " +
+                $"VALUES({profile}, {cityID})");
+
+            SqliteDataAccess.Close();
+        }
+
         public void FindCity(string cityName) // Find City
         {
             HideCityButtons();
