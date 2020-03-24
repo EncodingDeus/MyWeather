@@ -5,6 +5,16 @@ namespace MyWeather
     [Serializable]
     public class WeatherResponse
     {
+        public WeatherResponse(int cityID, float temp, float feels_like, int preassure, int humidity, float windSpeed, int windDeg, int clouds, int sunrise, int sunset, int timezone)
+        {
+            this.id = cityID;
+            this.main = new MainInfo(temp, feels_like, preassure, humidity);
+            this.wind = new WindInfo(windSpeed, windDeg);
+            this.clouds = new CloudsInfo(clouds);
+            this.sys = new SystemInfo(sunrise, sunset);
+            this.timezone = timezone;
+        }
+
         public CityCoordInfo coord; // City geo location, longitude and latitude
         public string[] weather; // more info Weather condition codes // Now don't working
 
