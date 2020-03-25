@@ -77,7 +77,7 @@ namespace MyWeather
         {
             Debug.Log(CheckSiteStatus()); // Check Network
 
-            GetSavedSettings();
+            GetSavedSettings(); // LoadSettings()
             GetProfileInfo();
             ShowProfile();
 
@@ -156,28 +156,34 @@ namespace MyWeather
             if (citiesProfile != null) citiesProfile.Clear();
             else citiesProfile = new Dictionary<int, WeatherResponse>();
 
-            tableProfileCitiesId = SqliteDataAccess.GetTable($"SELECT * FROM WeatherProfile WHERE id_user_profile = {profile}");
+            tableWeatherInCities = SqliteDataAccess.GetTable("SELECT Weather.id_city, Name, State, Country, longitude, City.latitude, Temp, Feels_like, Pressure, Humidity, Wind_speed, Wind_deg, Clouds, Sunrise, Sunset, Timezone " +
+                "FROM Weather, City " +
+                "WHERE Weather.id_city = City.id_city AND EXISTS " +
+                "(SELECT id_city " +
+                "FROM WeatherProfile " +
+                $"WHERE id_user_profile = {profile} AND Weather.id_city = WeatherProfile.id_city)");
 
-            for (int i = 0; i < tableProfileCitiesId.Rows.Count; i++)
+            // if (tableWeatherInCities == null) // do something 
+
+            for (int i = 0; i < tableWeatherInCities.Rows.Count; i++)
             {
-                tableWeatherInCities = SqliteDataAccess.GetTable($"SELECT * FROM Weather WHERE id_city = {tableProfileCitiesId.Rows[i][2].ToString()}");
-
-                Debug.Log($"city: {tableProfileCitiesId.Rows[i][2]} Found?:{tableWeatherInCities != null}");
-
-                if (tableWeatherInCities == null) continue;
-
                 weatherInCity = new WeatherResponse(
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][1].ToString()), // cityId
-                    Convert.ToSingle(tableWeatherInCities.Rows[0][2]), // temp
-                    Convert.ToSingle(tableWeatherInCities.Rows[0][3]), // feels_like
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][4]),  // pressure
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][5]),  // humidity
-                    Convert.ToSingle(tableWeatherInCities.Rows[0][6]), // wind_speed
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][7]),  // wind_deg
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][8]),  // clouds 
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][9]),  // sunrise
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][10]), // sunset
-                    Convert.ToInt32(tableWeatherInCities.Rows[0][11])  // timezone
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][0].ToString()), // cityId
+                    tableWeatherInCities.Rows[i][1].ToString(), // name
+                    tableWeatherInCities.Rows[i][2].ToString(), //state
+                    tableWeatherInCities.Rows[i][3].ToString(), // country
+                    Convert.ToSingle(tableWeatherInCities.Rows[i][4].ToString()), // longitude
+                    Convert.ToSingle(tableWeatherInCities.Rows[i][5].ToString()), // latitude
+                    Convert.ToSingle(tableWeatherInCities.Rows[i][6].ToString()), // temp
+                    Convert.ToSingle(tableWeatherInCities.Rows[i][7].ToString()), // feels_like
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][8].ToString()),  // pressure
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][9].ToString()),  // humidity
+                    Convert.ToSingle(tableWeatherInCities.Rows[i][10].ToString()), // wind_speed
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][11].ToString()),  // wind_deg
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][12].ToString()),  // clouds
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][13].ToString()),  // sunrise
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][14].ToString()),  // sunset
+                    Convert.ToInt32(tableWeatherInCities.Rows[i][15].ToString())  // timezone
                     );
 
                 citiesProfile.Add(weatherInCity.id, weatherInCity); // (cityID, WeatherInCity)

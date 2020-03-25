@@ -5,13 +5,15 @@ namespace MyWeather
     [Serializable]
     public class WeatherResponse
     {
-        public WeatherResponse(int cityID, float temp, float feels_like, int preassure, int humidity, float windSpeed, int windDeg, int clouds, int sunrise, int sunset, int timezone)
+        public WeatherResponse(int cityID, string cityName, string state, string country, float cityLongitude, float cityLatitude, float temp, float feels_like, int preassure, int humidity, float windSpeed, int windDeg, int clouds, int sunrise, int sunset, int timezone)
         {
             this.id = cityID;
+            this.name = cityName;
+            this.coord = new CityCoordInfo(cityLongitude, cityLongitude);
             this.main = new MainInfo(temp, feels_like, preassure, humidity);
             this.wind = new WindInfo(windSpeed, windDeg);
             this.clouds = new CloudsInfo(clouds);
-            this.sys = new SystemInfo(sunrise, sunset);
+            this.sys = new SystemInfo(country, state, sunrise, sunset);
             this.timezone = timezone;
         }
 
