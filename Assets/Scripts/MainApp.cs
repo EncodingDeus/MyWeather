@@ -75,11 +75,19 @@ namespace MyWeather
 
         void Start()
         {
-            Debug.Log(CheckSiteStatus()); // Check Network
+
+            //Debug.Log(CheckSiteStatus()); // Check Network
 
             GetSavedSettings(); // LoadSettings()
             GetProfileInfo();
+            //resp = GetWeatherFromFile(@"C:\Users\Deus\Documents\GitHub\Unity3D\Test_assignments\MyWeather\Assets\tempCity.json");
             ShowProfile();
+
+            //SaveWeather(GetWeather("Moscow"));
+            //SaveWeather(GetWeather("Moscow"));
+            //SaveWeather(GetWeather(524894));
+
+
 
             //Debug.Log(SqliteDataAccess.GetTable($"SELECT * FROM Weather WHERE id_city = 1") == null);
 
@@ -216,6 +224,11 @@ namespace MyWeather
             return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
+        public WeatherResponse Get5DaysForecast()
+        {
+            return null;
+        }
+
         private WeatherResponse GetWeather(int cityId) 
         {
             url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={apiKey}&lang={language}&units={units}";
@@ -236,9 +249,9 @@ namespace MyWeather
         {
             SqliteDataAccess.ConnectTo();
 
-            SqliteDataAccess.ExecuteQuery("INSERT INTO Weather(id_city, Temp, Feels_like, Pressure, Humidity, Wind_speed, Wind_deg, Clouds, Sunrise, Sunset, Timezone) " + 
-                $"VALUES({weather.id}, '{weather.main.temp}', '{weather.main.feels_like}', {weather.main.pressure}, {weather.main.humidity}, '{weather.wind.speed}', {weather.wind.deg}, {weather.clouds.all}, {weather.sys.sunrise}, {weather.sys.sunset}, {weather.timezone}) " +
-                $"ON CONFLICT(id_city) DO UPDATE SET Temp = '{weather.main.temp}', Feels_like = '{weather.main.feels_like}', Pressure = {weather.main.pressure}, Humidity = {weather.main.humidity}, Wind_speed = '{weather.wind.speed}', Wind_deg = {weather.wind.deg}, Clouds = {weather.clouds.all}, Sunrise = {weather.sys.sunrise}, Sunset = {weather.sys.sunset}, Timezone = {weather.timezone}");
+            SqliteDataAccess.ExecuteQuery("INSERT INTO Weather(id_city, Temp, Feels_like, Pressure, Humidity, Wind_speed, Wind_deg, Clouds, Sunrise, Sunset, Timezone, Weather_id, Weather_main, Weather_description, Weather_icon) " + 
+                $"VALUES({weather.id}, '{weather.main.temp}', '{weather.main.feels_like}', {weather.main.pressure}, {weather.main.humidity}, '{weather.wind.speed}', {weather.wind.deg}, {weather.clouds.all}, {weather.sys.sunrise}, {weather.sys.sunset}, {weather.timezone}, {weather.weather[0].id}, \"{weather.weather[0].main}\", \"{weather.weather[0].description}\", \"{weather.weather[0].icon}\") " +
+                $"ON CONFLICT(id_city) DO UPDATE SET Temp = '{weather.main.temp}', Feels_like = '{weather.main.feels_like}', Pressure = {weather.main.pressure}, Humidity = {weather.main.humidity}, Wind_speed = '{weather.wind.speed}', Wind_deg = {weather.wind.deg}, Clouds = {weather.clouds.all}, Sunrise = {weather.sys.sunrise}, Sunset = {weather.sys.sunset}, Timezone = {weather.timezone}, Weather_id = {weather.weather[0].id}, Weather_main = \"{weather.weather[0].main}\", Weather_description = \"{weather.weather[0].description}\", Weather_icon = \"{weather.weather[0].icon}\"");
 
             Debug.Log("Weather successfully saved");
 
