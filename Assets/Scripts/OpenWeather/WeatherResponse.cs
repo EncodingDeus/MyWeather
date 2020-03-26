@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace MyWeather
 {
@@ -18,7 +19,7 @@ namespace MyWeather
         }
 
         public CityCoordInfo coord; // City geo location, longitude and latitude
-        public string[] weather; // more info Weather condition codes // Now don't working
+        public List<WeatherInfo> weather; // more info Weather condition codes // Now don't working
 
         public string Base; // Internal parameter // should be "base". Now don't working
 
