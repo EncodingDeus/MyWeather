@@ -50,7 +50,6 @@ namespace MyWeather
         public CityInfo[] cities;
 
         public WeatherResponse resp;
-        public WeatherForecastResponse respForecast;
 
         private string apiKey;
         private string units; // UNITS: imperial ("&units=imperial");  metric ("&units=metric");  standard (""); 
@@ -77,17 +76,12 @@ namespace MyWeather
         void Start()
         {
 
-            Debug.Log(CheckSiteStatus()); // Check Network
+            //Debug.Log(CheckSiteStatus()); // Check Network
 
             GetSavedSettings(); // LoadSettings()
             GetProfileInfo();
-            //resp = GetWeather("Perm");
-
-            //respForecast = Get5DaysForecast("Perm");
-
-            respForecast = GetWeatherForecastFormFile(@"C:\Users\1\Unity\MyWeather\Assets\tempCity.json");
-
-            //ShowProfile();
+            //resp = GetWeatherFromFile(@"C:\Users\Deus\Documents\GitHub\Unity3D\Test_assignments\MyWeather\Assets\tempCity.json");
+            ShowProfile();
 
             //SaveWeather(GetWeather("Moscow"));
             //SaveWeather(GetWeather("Moscow"));
@@ -101,13 +95,6 @@ namespace MyWeather
 
 
             //resp = GetWeather(); // Проверить, что будет если не будет интернета, посмотреть на сайте
-        }
-
-        private WeatherForecastResponse GetWeatherForecastFormFile(string filePath)
-        {
-            string json = File.ReadAllText(filePath);
-
-            return JsonUtility.FromJson<WeatherForecastResponse>(json);
         }
 
         private void ShowProfile()
@@ -237,22 +224,9 @@ namespace MyWeather
             return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
-        public WeatherForecastResponse Get5DaysForecast(string cityName)
-        {     
-            url = $"http://api.openweathermap.org/data/2.5/forecast?q={cityName}&appid={apiKey}&lang={language}&units={units}";
-
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
-
-            HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse();
-
-            using (StreamReader streamReader = new StreamReader(webResponse.GetResponseStream()))
-            {
-                responseJson = streamReader.ReadToEnd();
-            }
-
-            //SaveWeatherInJSON(responseJson, "tempCity");
-
-            return JsonUtility.FromJson<WeatherForecastResponse>(responseJson);
+        public WeatherResponse Get5DaysForecast()
+        {
+            return null;
         }
 
         private WeatherResponse GetWeather(int cityId) 
