@@ -63,6 +63,9 @@ namespace MyWeather
         [SerializeField]
         private WeatherResponse weatherInCity;
 
+        [SerializeField]
+        private WeatherForecastResponse respForecast;
+
         private Dictionary<int, WeatherResponse> citiesProfile;
 
         private DataTable tableFindCity;
@@ -182,6 +185,18 @@ namespace MyWeather
 
         }
 
+        private void SaveWeatherForecast(WeatherForecastResponse weather, string filePath)
+        {
+            string json = JsonUtility.ToJson(weather);
+            File.WriteAllText(filePath, json);
+        }
+
+        private WeatherForecastResponse LoadWeatherForecast(string filePath)
+        {
+            string json = File.ReadAllText(filePath);
+            return JsonUtility.FromJson< WeatherForecastResponse>(json);
+        }
+
         private WeatherResponse GetWeatherFromFile(string path)
         {
             string weather = File.ReadAllText(path); // check existing file path
@@ -219,8 +234,6 @@ namespace MyWeather
             {
                 responseJson = streamReader.ReadToEnd();
             }
-
-            //SaveWeatherInJSON(responseJson, "tempCity");
 
             return JsonUtility.FromJson<WeatherForecastResponse>(responseJson);
         }
