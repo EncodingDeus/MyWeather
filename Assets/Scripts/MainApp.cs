@@ -225,6 +225,39 @@ namespace MyWeather
             return JsonUtility.FromJson< WeatherForecastResponse>(json);
         }
 
+        private WeatherForecastResponse LoadWeatherForecastFromDBbyCityId(int cityId)
+        {
+            WeatherForecastResponse tempForecast = new WeatherForecastResponse();
+            tempForecast.list = new List<WeatherForecastInfo>();
+            WeatherForecastInfo tempForecastInfo;
+
+            DataTable table = SqliteDataAccess.GetTable($"SELECT * FROM WeatherForecast WHERE city_id = {cityId}");
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                tempForecastInfo = new WeatherForecastInfo(
+                    Convert.ToSingle(table.Rows[i][3]),
+                    Convert.ToSingle(table.Rows[i][4]),
+                    Convert.ToSingle(table.Rows[i][5]),
+                    Convert.ToSingle(table.Rows[i][6]),
+                    Convert.ToInt32(table.Rows[i][7]),
+                    Convert.ToInt32(table.Rows[i][8]),
+                    Convert.ToInt32(table.Rows[i][9]),
+                    Convert.ToInt32(table.Rows[i][10]),
+                    table.Rows[i][11].ToString(),
+                    table.Rows[i][12].ToString(),
+                    table.Rows[i][13].ToString(),
+                    Convert.ToSingle(table.Rows[i][14]),
+                    Convert.ToInt32(table.Rows[i][15]),
+                    Convert.ToInt32(table.Rows[i][16]),
+                    table.Rows[i][2].ToString()
+                    );
+
+                tempForecast.list.Add(tempForecastInfo);             
+            }
+            return tempForecast;
+        }
+
         private WeatherResponse GetWeatherFromFile(string path)
         {
             string weather = File.ReadAllText(path); // check existing file path
