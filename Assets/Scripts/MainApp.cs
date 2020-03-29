@@ -186,6 +186,7 @@ namespace MyWeather
         }
 
         private void SaveWeatherForecast(WeatherForecastResponse weather, string filePath)
+        private void SaveWeatherForecastInFile(WeatherForecastResponse weather, string filePath)
         {
             string json = JsonUtility.ToJson(weather);
             File.WriteAllText(filePath, json);
