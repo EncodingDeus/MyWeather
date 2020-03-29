@@ -185,14 +185,41 @@ namespace MyWeather
 
         }
 
-        private void SaveWeatherForecast(WeatherForecastResponse weather, string filePath)
         private void SaveWeatherForecastInFile(WeatherForecastResponse weather, string filePath)
         {
             string json = JsonUtility.ToJson(weather);
             File.WriteAllText(filePath, json);
         }
 
-        private WeatherForecastResponse LoadWeatherForecast(string filePath)
+        private void SaveWeatherForecastInDB(WeatherForecastResponse weather)
+        {
+            DeleteWeatherForecastFromDB(weather.city.id);
+
+            SqliteDataAccess.ConnectTo();
+
+            foreach (WeatherForecastInfo item in weather.list)
+            {
+                // Перед добавлением нужно удалить из базы старые записи where city_id = weather.city.id
+                SqliteDataAccess.ExecuteQuery(
+                    "INSERT INTO WeatherForecast(city_id, DateTime, Temp, Temp_feels_like, Temp_min, Temp_max, Pressure, Humidity, Sea_level, Grnd_level, Weather_main, Weather_description, Weather_icon, Wind_speed, Wind_deg, Clouds) " +
+                    $"VALUES ({weather.city.id}, \"{item.dt_txt}\", '{item.main.temp}', '{item.main.feels_like}', '{item.main.temp_min}', '{item.main.temp_max}', {item.main.pressure}, {item.main.humidity}, {item.main.sea_level}, {item.main.grnd_level}, \"{item.weather[0].main}\", \"{item.weather[0].description}\", \"{item.weather[0].icon}\", '{item.wind.speed}', {item.wind.deg}, {item.clouds.all})");
+            }
+            SqliteDataAccess.Close();
+        }
+
+        private void DeleteWeatherForecastFromDB(int cityId)
+        {
+            SqliteDataAccess.ConnectTo();
+
+            SqliteDataAccess.ExecuteQuery(
+                "DELETE FROM WeatherForecast " +
+                $"WHERE city_id = {cityId};"
+                );
+
+            SqliteDataAccess.Close();
+        }
+
+        private WeatherForecastResponse LoadWeatherForecastFromFile(string filePath)
         {
             string json = File.ReadAllText(filePath);
             return JsonUtility.FromJson< WeatherForecastResponse>(json);
