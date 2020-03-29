@@ -5,10 +5,12 @@ namespace MyWeather
     [Serializable]
     public class MainInfo
     {
-        public MainInfo(float temp, float feels_like, int pressure, int humidity, int sea_level, int grnd_level)
+        public MainInfo(float temp, float feels_like, float temp_min, float temp_max, int pressure, int humidity, int sea_level, int grnd_level)
         {
             this.temp = temp;
             this.feels_like = feels_like;
+            this.temp_min = temp_min;
+            this.temp_max = temp_max;
             this.pressure = pressure;
             this.humidity = humidity;
             this.sea_level = sea_level;
