@@ -63,6 +63,9 @@ namespace MyWeather
         [SerializeField]
         private WeatherResponse weatherInCity;
 
+        [SerializeField]
+        private WeatherForecastResponse respForecast;
+
         private Dictionary<int, WeatherResponse> citiesProfile;
 
         private DataTable tableFindCity;
@@ -75,26 +78,9 @@ namespace MyWeather
 
         void Start()
         {
-
-            //Debug.Log(CheckSiteStatus()); // Check Network
-
-            GetSavedSettings(); // LoadSettings()
+            GetSavedSettings(); 
             GetProfileInfo();
-            //resp = GetWeatherFromFile(@"C:\Users\Deus\Documents\GitHub\Unity3D\Test_assignments\MyWeather\Assets\tempCity.json");
             ShowProfile();
-
-            //SaveWeather(GetWeather("Moscow"));
-            //SaveWeather(GetWeather("Moscow"));
-            //SaveWeather(GetWeather(524894));
-
-
-
-            //Debug.Log(SqliteDataAccess.GetTable($"SELECT * FROM Weather WHERE id_city = 1") == null);
-
-
-
-
-            //resp = GetWeather(); // Проверить, что будет если не будет интернета, посмотреть на сайте
         }
 
         private void ShowProfile()
@@ -199,6 +185,18 @@ namespace MyWeather
 
         }
 
+        private void SaveWeatherForecast(WeatherForecastResponse weather, string filePath)
+        {
+            string json = JsonUtility.ToJson(weather);
+            File.WriteAllText(filePath, json);
+        }
+
+        private WeatherForecastResponse LoadWeatherForecast(string filePath)
+        {
+            string json = File.ReadAllText(filePath);
+            return JsonUtility.FromJson< WeatherForecastResponse>(json);
+        }
+
         private WeatherResponse GetWeatherFromFile(string path)
         {
             string weather = File.ReadAllText(path); // check existing file path
@@ -224,9 +222,20 @@ namespace MyWeather
             return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
-        public WeatherResponse Get5DaysForecast()
+        public WeatherForecastResponse GetWeatherForecast(string cityName)
         {
-            return null;
+            url = $"http://api.openweathermap.org/data/2.5/forecast?q={cityName}&appid={apiKey}&lang={language}&units={units}";
+
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
+
+            HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse();
+
+            using (StreamReader streamReader = new StreamReader(webResponse.GetResponseStream()))
+            {
+                responseJson = streamReader.ReadToEnd();
+            }
+
+            return JsonUtility.FromJson<WeatherForecastResponse>(responseJson);
         }
 
         private WeatherResponse GetWeather(int cityId) 
