@@ -6,20 +6,35 @@ namespace MyWeather
     public class CityButton : MonoBehaviour
     {
         [SerializeField]
-        private Text buttonText;
+        private Text cityNameText;
+        [SerializeField]
+        private Text cityTempText;
 
         [SerializeField]
         private MainApp mainApp;
 
-        private int id;
-        private string name;
+        private int cityId;
+        private string cityName;
+        private float temp;
+
+
+        public void Show(int id, string name, float temp)
+        {
+            this.cityId = id;
+            this.cityName = name;
+            this.temp = temp;
+
+            cityNameText.text = name;
+            cityTempText.text = temp.ToString();
+            gameObject.SetActive(true);
+        }
 
         public void Show(int id, string name)
         {
-            this.id = id;
-            this.name = name;
+            this.cityId = id;
+            this.cityName = name;
 
-            buttonText.text = name;
+            cityNameText.text = name;
             gameObject.SetActive(true);
         }
 
@@ -35,12 +50,22 @@ namespace MyWeather
 
         public void OnClick()
         {
-            Debug.Log($"id:{id} name:{name}");
+            Debug.Log($"id:{cityId} name:{cityName}");
         }
 
         public void ShowWeather()
         {
-            mainApp.ShowWeather(id);
+            mainApp.ShowCurrentWeather(cityId);
+        }
+
+        public void AddCityInProfile()
+        {
+            mainApp.AddCityInProfile(cityId);
+        }
+
+        public void DeleteCityFromProfile()
+        {
+            mainApp.RemoveCityFromProfile(cityId);
         }
     }
 }

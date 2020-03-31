@@ -11,14 +11,14 @@ namespace MyWeather
         public static SqliteCommand command;
 
         private const string fileName = @"database.db";
-        public static string DBPath = @"C:\Users\Deus\Documents\GitHub\Unity3D\Test_assignments\MyWeather\Assets\StreamingAssets\database.db";
+        public static string DBPath = @"..MyWeather\Assets\StreamingAssets\database.db";
 
         static SqliteDataAccess()
         {
             DBPath = GetDatabasePath();
         }
 
-        /// <summary> Возвращает путь к БД. Если её нет в нужной папке на Андроиде, то копирует её с исходного apk файла. </summary>
+        /// <summary> Returns the path to the database. </summary>
         private static string GetDatabasePath()
         {
 #if UNITY_EDITOR
@@ -35,6 +35,7 @@ namespace MyWeather
 #endif
         }
 
+        /// <summary> Connect to database.<summary>
         public static void ConnectTo()
         {
             connection = new SqliteConnection("Data Source=" + DBPath);
@@ -42,33 +43,21 @@ namespace MyWeather
             connection.Open();
         }
 
+        /// <summary> Close connection to database. </summary>
         public static void Close()
         {
             connection.Close();
             command.Dispose();
         }
 
+        /// <summary> Execute request without answer (fetch, delete, insert, etc.)</summary>
         public static void ExecuteQuery(string query)
         {
             command.CommandText = query;
             command.ExecuteNonQuery();
         }
 
-        public static string ExecuteQueryWithAnswer(string query)
-        {
-            ConnectTo();
-            command.CommandText = query;
-            var answer = command.ExecuteScalar();
-            Close();
-
-
-
-            if (answer != null) return answer.ToString();
-            else return null;
-        }
-
-        /// <summary> Этот метод возвращает таблицу, которая является результатом выборки запроса query. </summary>
-        /// <param name="query"> Собственно запрос. </param>
+        /// <summary> Returns a table that is the result of a query fetch. </summary>
         public static DataTable GetTable(string query)
         {
             ConnectTo();
@@ -86,8 +75,8 @@ namespace MyWeather
                 return DS.Tables[0];
         }
 
-        /// <summary> Распаковывает базу данных в указанный путь. </summary>
-        /// <param name="toPath"> Путь в который нужно распаковать базу данных. </param>
+        /// <summary> Unpacks the database to the specified path. </summary>
+        /// <param name="toPath"> The path to unpack the database. </param>
         private static void UnpackDatabase(string toPath)
         {
             string fromPath = Path.Combine(Application.streamingAssetsPath, fileName);

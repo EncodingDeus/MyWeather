@@ -13,6 +13,7 @@ namespace MyWeather
     public class MainApp : MonoBehaviour
     {
         private const string SITE = "openweathermap.org";
+        private TimeSpan timeToRequest = new TimeSpan(12, 0, 0); // 12 hours
 
         [Header("Cities Buttons")]
         [SerializeField]
@@ -22,6 +23,9 @@ namespace MyWeather
         private CityButton[] cityProfileButtons;
 
         [Header("Current Weather")]
+        [SerializeField]
+        private GameObject panelWeather;
+
         [SerializeField]
         private Text cityNameText;
         [SerializeField]
@@ -45,95 +49,264 @@ namespace MyWeather
         [SerializeField]
         private Text timezoneText;
 
+        [Header("Weather Forecast")]
+        [SerializeField]
+        private GameObject panelWeatherForecast;
+        [SerializeField]
+        private WeatherCard[] weatherCards;
 
+        [SerializeField]
+        private Text cityNameForecastText;
+        [SerializeField]
+        private Text dateForecastText;
+        [SerializeField]
+        private Text dayOfWeekForecastText;
+        [SerializeField]
+        private Text timeForecastText;
+        [SerializeField]
+        private Text tempForecastText;
+        [SerializeField]
+        private Text tempMinForecastText;
+        [SerializeField]
+        private Text tempMaxForecastText;
+        [SerializeField]
+        private Text feels_likeForecastText;
+        [SerializeField]
+        private Text seaLevelForecastText;
+        [SerializeField]
+        private Text grndLevelForecastText;
+        [SerializeField]
+        private Text pressureForecastText;
+        [SerializeField]
+        private Text humidityForecastText;
+        [SerializeField]
+        private Text windSpeedForecastText;
+        [SerializeField]
+        private Text windDegForecastText;
+        [SerializeField]
+        private Text cloudsForecastText;
 
-        public CityInfo[] cities;
+        [Header("Offline mode")]
+        [SerializeField]
+        private Animator offlinePanelAnimator;
 
-        public WeatherResponse resp;
+        [Space(16)]
 
         private string apiKey;
-        private string units; // UNITS: imperial ("&units=imperial");  metric ("&units=metric");  standard (""); 
+        private string units;
         private string language;
-
         private string url;
         private string responseJson;
 
         private int profile;
 
-        [SerializeField]
-        private WeatherResponse weatherInCity;
+        private bool serverStatus = false;
 
-        [SerializeField]
-        private WeatherForecastResponse respForecast;
+        private WeatherResponse currentWeatherResp;
 
+        private WeatherForecastResponse weatherForecastResp;
+
+        private Dictionary<int, string> citiesList;
         private Dictionary<int, WeatherResponse> citiesProfile;
 
         private DataTable tableFindCity;
         private DataTable tableSettings;
         private DataTable tableProfileCitiesId;
         private DataTable tableWeatherInCities;
+        private DataTable tableProfileCities;
+        private DataTable tableProfile;
 
-        private IPStatus citeStatus;
+        private IPStatus siteStatus;
 
 
         void Start()
         {
-            GetSavedSettings(); 
-            GetProfileInfo();
-            ShowProfile();
+            LoadApplicationSettings();
+            serverStatus = CheckServerStatus();
+            LoadProfileSettings();
+            LoadCurrentWeatherFromProfile();
+            ShowProfileCities();
         }
 
-        private void ShowProfile()
+        /// <summary>Loads cities to the list of cities and receives a weather forecast if there is a connection with the server</summary>
+        private void LoadProfileSettings()
         {
-            HideProfileCityButtons();
+            // Load cities
+            tableProfileCities = SqliteDataAccess.GetTable("SELECT WeatherProfile.id_city, Name, Datetime_request " +
+                "FROM WeatherProfile, City " + 
+                $"WHERE id_user_profile = {profile} AND WeatherProfile.id_city == City.id_city");
+
+            citiesList = new Dictionary<int, string>();
+
+            for (int i = 0; i < tableProfileCities.Rows.Count; i++)
+            {
+                int cityId = Convert.ToInt32(tableProfileCities.Rows[i][0]);
+                string cityName = tableProfileCities.Rows[i][1].ToString();
+                DateTime datetimeRequest = Convert.ToDateTime(tableProfileCities.Rows[i][2]);
+
+                citiesList.Add(cityId, cityName);
+
+                if (serverStatus)
+                {
+                    // Check weather forecast actuality
+                    if ((DateTime.Now - datetimeRequest) >= timeToRequest)
+                    {
+                        SaveWeatherForecastInDB(GetWeatherForecast(cityId));
+                    }
+                    // Get and Save current weather
+                    SaveCurrentWeather(GetCurrentWeather(cityId));
+                }
+            }
+        }
+
+        /// <summary>Show city list on the screen</summary>
+        private void ShowProfileCities()
+        {
+            HideProfileCities();
 
             int i = 0;
             foreach (KeyValuePair<int, WeatherResponse> weather in citiesProfile)
             {
-                cityProfileButtons[i].Show(weather.Value.id, weather.Value.name);
+                cityProfileButtons[i].Show(weather.Value.id, weather.Value.name, weather.Value.main.temp);
                 i++;
             }
+
+            cityProfileButtons[0].ShowWeather();
         }
 
-        public void ShowWeather(int cityId)
+        /// <summary>Hide city list from the screen</summary>
+        private void HideProfileCities()
         {
-            weatherInCity = GetWeather(cityId);
-
-            cityNameText.text = weatherInCity.name;
-            tempText.text = weatherInCity.main.temp.ToString();
-            feels_likeText.text = weatherInCity.main.feels_like.ToString();
-            pressureText.text = weatherInCity.main.pressure.ToString();
-            humidityText.text = weatherInCity.main.humidity.ToString();
-            wind_speedText.text = weatherInCity.wind.speed.ToString();
-            wind_degText.text = weatherInCity.wind.deg.ToString();
-            cloudsText.text = weatherInCity.clouds.all.ToString();
-            sunriseText.text = weatherInCity.sys.sunrise.ToString();
-            sunsetText.text = weatherInCity.sys.sunset.ToString();
-            timezoneText.text = weatherInCity.timezone.ToString();
+            for (int i = 0; i < cityProfileButtons.Length; i++)
+                cityProfileButtons[i].Hide();
         }
 
-        private bool CheckSiteStatus()
+        /// <summary>Show current weather by city id on the screen</summary>
+        public void ShowCurrentWeather(int cityId)
         {
-            citeStatus = IPStatus.Unknown;
+            long utcSunriseDate = currentWeatherResp.sys.sunrise;
+            long utcSunsetDate = currentWeatherResp.sys.sunset;
+            DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            DateTime sunriseDate = start.AddSeconds(utcSunriseDate).ToLocalTime();
+            DateTime sunsetDate = start.AddSeconds(utcSunsetDate).ToLocalTime();
+            TimeSpan timezone = new TimeSpan(0, 0, 0, currentWeatherResp.timezone);
+
+            currentWeatherResp = citiesProfile[cityId];
+
+            cityNameText.text = currentWeatherResp.name;
+            tempText.text = currentWeatherResp.main.temp.ToString();
+            feels_likeText.text = currentWeatherResp.main.feels_like.ToString();
+            pressureText.text = currentWeatherResp.main.pressure.ToString();
+            humidityText.text = currentWeatherResp.main.humidity.ToString();
+            wind_speedText.text = currentWeatherResp.wind.speed.ToString();
+            wind_degText.text = currentWeatherResp.wind.deg.ToString();
+            cloudsText.text = currentWeatherResp.clouds.all.ToString();
+            sunriseText.text = sunriseDate.ToShortTimeString();
+            sunsetText.text = sunsetDate.ToShortTimeString();
+
+            ShowWeatherForecast(cityId);
+        }
+
+        /// <summary>Show weather forecast by city id on the screen</summary>
+        public void ShowWeatherForecast(int cityId)
+        {
+            weatherForecastResp = LoadWeatherForecastFromDBbyCityId(cityId);
+
+            for (int i = 0; i < weatherCards.Length; i++)
+            {
+                weatherCards[i].ShowCard(weatherForecastResp.list[i]);
+            } 
+        }
+
+        /// <summary>Show full info about weather forecast</summary>
+        public void ShowFullWeatherByCard(WeatherForecastInfo weather)
+        {
+
+            DateTime dateTime = Convert.ToDateTime(weather.dt_txt);
+
+            cityNameForecastText.text = "";
+
+            dateForecastText.text = dateTime.ToShortDateString();
+
+            dayOfWeekForecastText.text = dateTime.DayOfWeek.ToString();
+
+            timeForecastText.text = dateTime.TimeOfDay.ToString();
+
+            tempForecastText.text = weather.main.temp.ToString();
+
+            tempMinForecastText.text = weather.main.temp_min.ToString();
+
+            tempMaxForecastText.text = weather.main.temp_max.ToString();
+
+            feels_likeForecastText.text = weather.main.feels_like.ToString();
+
+            seaLevelForecastText.text = weather.main.sea_level.ToString();
+
+            grndLevelForecastText.text = weather.main.grnd_level.ToString();
+
+            pressureForecastText.text = weather.main.pressure.ToString();
+
+            humidityForecastText.text = weather.main.humidity.ToString();
+
+            windSpeedForecastText.text = weather.wind.speed.ToString();
+
+            windDegForecastText.text = weather.wind.deg.ToString();
+
+            cloudsForecastText.text = weather.clouds.all.ToString();
+        }
+
+        /// <summary>Add city in profile by city id. if a connection with the server is lost, return void</summary>
+        public void AddCityInProfile(int cityId)
+        {
+            if (citiesList.ContainsKey(cityId)) return;
+            serverStatus = CheckServerStatus();
+            if (!serverStatus) return;
+
+            SaveCurrentWeather(GetCurrentWeather(cityId));
+            SaveWeatherForecastInDB(GetWeatherForecast(cityId));
+            SaveCityInProfile(cityId);
+
+            LoadProfileSettings();
+            LoadCurrentWeatherFromProfile();
+            ShowProfileCities();
+        }
+
+        /// <summary>Remove city from profile by city id </summary>
+        public void RemoveCityFromProfile(int cityId)
+        {
+            if (citiesList.Count == 1) return;
+
+            DeleteWeatherForecastFromDB(cityId);
+            DeleteCurrentWeatherFromDB(cityId);
+            DeleteCityFromProfile(cityId);
+
+            ShowProfileCities();
+        }
+
+        /// <summary>Check server status</summary>
+        private bool CheckServerStatus()
+        {
+            siteStatus = IPStatus.Unknown;
             try
             {
-                citeStatus = new System.Net.NetworkInformation.Ping().Send(SITE).Status;
+                siteStatus = new System.Net.NetworkInformation.Ping().Send(SITE).Status;
             }
             catch { }
 
-            if (citeStatus == IPStatus.Success)
+            if (siteStatus == IPStatus.Success)
             {
-                Debug.Log("Сервер работает");
+                offlinePanelAnimator.SetBool("Show", false);
                 return true;
             }
             else
             {
-                Debug.Log("Сервер временно недоступен!");
+                offlinePanelAnimator.SetBool("Hide", true);
                 return false;
             }
         }
 
-        private void GetSavedSettings()
+        /// <summary>Load application settings</summary>
+        private void LoadApplicationSettings()
         {
             tableSettings = SqliteDataAccess.GetTable("SELECT * FROM AppSettings");
 
@@ -145,7 +318,8 @@ namespace MyWeather
             Debug.Log($"api:{apiKey} units:{units} language:{language} profile:{profile}");
         }
 
-        private void GetProfileInfo()
+        /// <summary>Load current weather all cities by profile from database</summary>
+        private void LoadCurrentWeatherFromProfile()
         {
             if (citiesProfile != null) citiesProfile.Clear();
             else citiesProfile = new Dictionary<int, WeatherResponse>();
@@ -157,11 +331,9 @@ namespace MyWeather
                 "FROM WeatherProfile " +
                 $"WHERE id_user_profile = {profile} AND Weather.id_city = WeatherProfile.id_city)");
 
-            // if (tableWeatherInCities == null) // do something 
-
             for (int i = 0; i < tableWeatherInCities.Rows.Count; i++)
             {
-                weatherInCity = new WeatherResponse(
+                currentWeatherResp = new WeatherResponse(
                     Convert.ToInt32(tableWeatherInCities.Rows[i][0].ToString()), // cityId
                     tableWeatherInCities.Rows[i][1].ToString(), // name
                     tableWeatherInCities.Rows[i][2].ToString(), //state
@@ -180,31 +352,89 @@ namespace MyWeather
                     Convert.ToInt32(tableWeatherInCities.Rows[i][15].ToString())  // timezone
                     );
 
-                citiesProfile.Add(weatherInCity.id, weatherInCity); // (cityID, WeatherInCity)
+                citiesProfile.Add(currentWeatherResp.id, currentWeatherResp); // (cityID, WeatherInCity)
+            }
+        }
+
+        /// <summary>Load weather forecast by city id from database</summary>
+        private WeatherForecastResponse LoadWeatherForecastFromDBbyCityId(int cityId)
+        {
+            WeatherForecastResponse tempForecast = new WeatherForecastResponse();
+            tempForecast.list = new List<WeatherForecastInfo>();
+            WeatherForecastInfo tempForecastInfo;
+
+            DataTable table = SqliteDataAccess.GetTable($"SELECT * FROM WeatherForecast WHERE city_id = {cityId}");
+
+            for (int i = 0; i < table.Rows.Count; i++)
+            {
+                tempForecastInfo = new WeatherForecastInfo(
+                    Convert.ToSingle(table.Rows[i][3]),
+                    Convert.ToSingle(table.Rows[i][4]),
+                    Convert.ToSingle(table.Rows[i][5]),
+                    Convert.ToSingle(table.Rows[i][6]),
+                    Convert.ToInt32(table.Rows[i][7]),
+                    Convert.ToInt32(table.Rows[i][8]),
+                    Convert.ToInt32(table.Rows[i][9]),
+                    Convert.ToInt32(table.Rows[i][10]),
+                    table.Rows[i][11].ToString(),
+                    table.Rows[i][12].ToString(),
+                    table.Rows[i][13].ToString(),
+                    Convert.ToSingle(table.Rows[i][14]),
+                    Convert.ToInt32(table.Rows[i][15]),
+                    Convert.ToInt32(table.Rows[i][16]),
+                    table.Rows[i][2].ToString()
+                    );
+
+                tempForecast.list.Add(tempForecastInfo);
+            }
+            return tempForecast;
+        }
+
+        /// <summary>Delete current weather by city id from database</summary>
+        private void DeleteCurrentWeatherFromDB(int cityId)
+        {
+            SqliteDataAccess.ConnectTo();
+
+            SqliteDataAccess.ExecuteQuery(
+                "DELETE FROM Weather " +
+                $"WHERE id_city = {cityId};"
+                );
+
+            SqliteDataAccess.Close();
+        }
+
+        /// <summary>Delete weather forecast by city id from database</summary>
+        private void DeleteWeatherForecastFromDB(int cityId)
+        {
+            SqliteDataAccess.ConnectTo();
+
+            SqliteDataAccess.ExecuteQuery(
+                "DELETE FROM WeatherForecast " +
+                $"WHERE city_id = {cityId};"
+                );
+
+            SqliteDataAccess.Close();
+        }
+
+        /// <summary>Get current weather by city id from server</summary>
+        private WeatherResponse GetCurrentWeather(int cityId)
+        {
+            url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={apiKey}&lang={language}&units={units}";
+
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
+
+            HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse();
+
+            using (StreamReader streamReader = new StreamReader(webResponse.GetResponseStream()))
+            {
+                responseJson = streamReader.ReadToEnd();
             }
 
+            return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
-        private void SaveWeatherForecast(WeatherForecastResponse weather, string filePath)
-        {
-            string json = JsonUtility.ToJson(weather);
-            File.WriteAllText(filePath, json);
-        }
-
-        private WeatherForecastResponse LoadWeatherForecast(string filePath)
-        {
-            string json = File.ReadAllText(filePath);
-            return JsonUtility.FromJson< WeatherForecastResponse>(json);
-        }
-
-        private WeatherResponse GetWeatherFromFile(string path)
-        {
-            string weather = File.ReadAllText(path); // check existing file path
-
-            return JsonUtility.FromJson<WeatherResponse>(weather);
-        } // I think this no need more
-
-        private WeatherResponse GetWeather(string cityName) 
+        /// <summary>Get current weather by city name from server</summary>
+        private WeatherResponse GetCurrentWeather(string cityName) 
         {
             url = $"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={apiKey}&lang={language}&units={units}";
 
@@ -217,11 +447,27 @@ namespace MyWeather
                 responseJson = streamReader.ReadToEnd();
             }
 
-            //SaveWeatherInJSON(responseJson, "tempCity");
-
             return JsonUtility.FromJson<WeatherResponse>(responseJson);
         }
 
+        /// <summary>Get weather forecast by city id from server</summary>
+        public WeatherForecastResponse GetWeatherForecast(int cityId)
+        {
+            url = $"http://api.openweathermap.org/data/2.5/forecast?id={cityId}&appid={apiKey}&lang={language}&units={units}";
+
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
+
+            HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse();
+
+            using (StreamReader streamReader = new StreamReader(webResponse.GetResponseStream()))
+            {
+                responseJson = streamReader.ReadToEnd();
+            }
+
+            return JsonUtility.FromJson<WeatherForecastResponse>(responseJson);
+        }
+
+        /// <summary>Get weather forecast by city name from server</summary>
         public WeatherForecastResponse GetWeatherForecast(string cityName)
         {
             url = $"http://api.openweathermap.org/data/2.5/forecast?q={cityName}&appid={apiKey}&lang={language}&units={units}";
@@ -238,23 +484,8 @@ namespace MyWeather
             return JsonUtility.FromJson<WeatherForecastResponse>(responseJson);
         }
 
-        private WeatherResponse GetWeather(int cityId) 
-        {
-            url = $"http://api.openweathermap.org/data/2.5/weather?id={cityId}&appid={apiKey}&lang={language}&units={units}";
-
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
-
-            HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse();
-
-            using (StreamReader streamReader = new StreamReader(webResponse.GetResponseStream()))
-            {
-                responseJson = streamReader.ReadToEnd();
-            }
-
-            return JsonUtility.FromJson<WeatherResponse>(responseJson);
-        }
-
-        private void SaveWeather(WeatherResponse weather)
+        /// <summary>Save current weather in database</summary>
+        private void SaveCurrentWeather(WeatherResponse weather)
         {
             SqliteDataAccess.ConnectTo();
 
@@ -267,18 +498,66 @@ namespace MyWeather
             SqliteDataAccess.Close();
         }
 
-        private void SaveCityInProfile(int cityID)
+        /// <summary>Save weather forecast in database</summary>
+        private void SaveWeatherForecastInDB(WeatherForecastResponse weather)
+        {
+            DeleteWeatherForecastFromDB(weather.city.id);
+
+            SqliteDataAccess.ConnectTo();
+
+            foreach (WeatherForecastInfo item in weather.list)
+            {
+                SqliteDataAccess.ExecuteQuery(
+                    "INSERT INTO WeatherForecast(city_id, DateTime, Temp, Temp_feels_like, Temp_min, Temp_max, Pressure, Humidity, Sea_level, Grnd_level, Weather_main, Weather_description, Weather_icon, Wind_speed, Wind_deg, Clouds) " +
+                    $"VALUES ({weather.city.id}, \"{item.dt_txt}\", '{item.main.temp}', '{item.main.feels_like}', '{item.main.temp_min}', '{item.main.temp_max}', {item.main.pressure}, {item.main.humidity}, {item.main.sea_level}, {item.main.grnd_level}, \"{item.weather[0].main}\", \"{item.weather[0].description}\", \"{item.weather[0].icon}\", '{item.wind.speed}', {item.wind.deg}, {item.clouds.all})");
+            }
+            SqliteDataAccess.Close();
+
+
+            UpdateProfile(weather.city.id);
+        }
+
+        /// <summary>Save city id and current date time by profile in database</summary>
+        private void SaveCityInProfile(int cityId)
         {
             SqliteDataAccess.ConnectTo();
 
-            // Need to check if row exists then no need save duplicate
-            SqliteDataAccess.ExecuteQuery("INSERT INTO WeatherProfile(id_user_profile, id_city) " +
-                $"VALUES({profile}, {cityID})");
+            SqliteDataAccess.ExecuteQuery("INSERT INTO WeatherProfile(id_user_profile, id_city, Datetime_request) " +
+                $"VALUES ({profile}, {cityId}, \"{DateTime.Now}\")");
 
             SqliteDataAccess.Close();
         }
 
-        public void FindCity(string cityName) // Find City
+        /// <summary>Delete city by city id from database</summary>
+        public void DeleteCityFromProfile(int cityId)
+        {
+            Debug.Log("DeleteCityFromProfile");
+            SqliteDataAccess.ConnectTo();
+
+            SqliteDataAccess.ExecuteQuery("DELETE FROM WeatherProfile " +
+                $"WHERE id_city = {cityId}");
+
+            SqliteDataAccess.Close();
+
+            citiesProfile.Remove(cityId);
+            citiesList.Remove(cityId);
+        }
+
+        /// <summary>Update datetime request by city id in WeatherProfile table</summary>
+        private void UpdateProfile(int cityID)
+        {
+            SqliteDataAccess.ConnectTo();
+
+            SqliteDataAccess.ExecuteQuery("UPDATE WeatherProfile " +
+                $"SET Datetime_request = \"{DateTime.Now}\" " +
+                $"WHERE id_user_profile = {profile} AND id_city = {cityID}"
+            );
+
+            SqliteDataAccess.Close();
+        }
+
+        /// <summary>Find city by city name</summary>
+        public void FindCity(string cityName)
         {
             HideCityButtons();
 
@@ -286,10 +565,12 @@ namespace MyWeather
                 "FROM City " +
                 $"WHERE name like  '%{cityName}%' " + // ORDER BY name
                 "LIMIT 10");
-            Debug.Log(tableFindCity.Rows.Count);
+
             ShowCityButtons(tableFindCity);
         }
 
+        /// <summary>Show on the screen cities by table city</summary>
+        /// <param name="tableCity">Table rows -> [id_city], [Name]</param>
         private void ShowCityButtons(DataTable tableCity)
         {
             for (int i = 0; i < tableCity.Rows.Count; i++)
@@ -298,54 +579,11 @@ namespace MyWeather
             }
         }
 
+        /// <summary>Hide from the screen cities</summary>
         private void HideCityButtons()
         {
             for (int i = 0; i < cityButtons.Length; i++)
                 cityButtons[i].Hide();
-        }
-
-        private void HideProfileCityButtons()
-        {
-            for (int i = 0; i < cityProfileButtons.Length; i++)
-                cityProfileButtons[i].Hide();
-        }
-
-        void SaveWeatherInJSON(string weather, string path)
-        {
-            Debug.Log("file Saved = " + Application.dataPath + @"/" + path + ".json");
-            File.WriteAllText(Application.dataPath + @"/" + path + ".json", weather);
-        } // I think this no need more
-
-        void GetCitiesInfoFromFile()
-        {
-
-            string citiesInfoJsonPath = Application.streamingAssetsPath + @"\city.list.json"; // Move
-            string citiesInfoJson = File.ReadAllText(citiesInfoJsonPath);
-
-            cities = JsonHelper.FromJson<CityInfo>(citiesInfoJson);
-            Debug.Log("UpdateCitiesInfo");
-        }
-
-        void SaveCitiesInfoInDB()
-        {
-            string query;
-
-            SqliteDataAccess.ConnectTo();
-            for (int i = 0; i < cities.Length; i++)
-            { 
-                query = "INSERT INTO City (id_city, Name, State, Country, Longitude, latitude) " +
-                    $"VALUES( {cities[i].id}, \"{cities[i].name.Replace("\"", "\"\"")}\", \"{cities[i].state}\", \"{cities[i].country}\", '{cities[i].coord.lon}', '{cities[i].coord.lat}')";
-                SqliteDataAccess.ExecuteQuery(query);
-            }
-            SqliteDataAccess.Close();
-
-            Debug.Log("Cities Saved!");
-        }
-
-        // Update is called once per frame
-        void Update()
-        {
-
         }
     }
 }
