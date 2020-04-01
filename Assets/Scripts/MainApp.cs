@@ -573,10 +573,11 @@ namespace MyWeather
         /// <param name="tableCity">Table rows -> [id_city], [Name]</param>
         private void ShowCityButtons(DataTable tableCity)
         {
-            for (int i = 0; i < tableCity.Rows.Count; i++)
-            {
-                cityButtons[i].Show(Convert.ToInt32(tableCity.Rows[i][0].ToString()), tableCity.Rows[i][1].ToString()); // Rows[i]["id_city"], Rows[i]["Name"]
-            }
+            if (tableCity != null)
+                for (int i = 0; i < tableCity.Rows.Count; i++)
+                {
+                    cityButtons[i].Show(Convert.ToInt32(tableCity.Rows[i][0].ToString()), tableCity.Rows[i][1].ToString()); // Rows[i]["id_city"], Rows[i]["Name"]
+                }
         }
 
         /// <summary>Hide from the screen cities</summary>
