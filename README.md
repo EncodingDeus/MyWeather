@@ -24,4 +24,11 @@ These instructions will get you a copy of the project up and running on your loc
 
 * **Dmitry Goloushkin** - *Initial work* - [EncodingDeus](https://github.com/EncodingDeus)
 
+## In Future
 
+* **Multithreading**, especially for getting weather from server
+* **Exception handler** 
+* **update UI**
+* **Localisation**
+* **Unit selection** (metric, standart)
+* **Ability to select a profile**
